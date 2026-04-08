@@ -50,16 +50,50 @@ async def upload_invoice(
     try:
         logger.info("Invoice upload requested", filename=file.filename, factory_id=factory_id)
 
-        # TODO: Implement invoice processing
-        # This will be implemented in Phase 2 of development
+        # Validate file
+        if not file.filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid file format. Please upload JPEG or PNG image."
+            )
 
-        return {
-            "message": "Invoice upload endpoint - to be implemented",
-            "filename": file.filename,
-            "factory_id": factory_id,
-            "status": "pending_implementation"
-        }
+        # Read file content
+        content = await file.read()
 
+        # Validate file size (10MB max)
+        if len(content) > 10 * 1024 * 1024:
+            raise HTTPException(
+                status_code=413,
+                detail="File size exceeds 10MB limit"
+            )
+
+        # Use factory_id from auth context in production
+        # For now, use provided factory_id or generate test one
+        if not factory_id:
+            from uuid import uuid4
+            factory_id = str(uuid4())  # Temporary: will come from auth
+
+        # Process invoice
+        from app.services.invoice_processor import InvoiceProcessor
+
+        processor = InvoiceProcessor(db)
+        result = await processor.process_invoice(
+            image_file=content,
+            filename=file.filename,
+            factory_id=factory_id,
+        )
+
+        logger.info(
+            "Invoice processed successfully",
+            invoice_id=result["invoice_id"],
+            status=result["status"]
+        )
+
+        return result
+
+    except ValueError as e:
+        logger.error("Invoice processing validation failed", error=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error("Invoice upload failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
