@@ -51,13 +51,37 @@ async def start_negotiation(
     try:
         logger.info("Start negotiation requested", invoice_id=invoice_id)
 
-        # TODO: Implement negotiation start logic
+        # Import negotiation engine
+        from app.services.negotiation_engine import NegotiationEngine
+
+        # Get factory_id from auth context (for now, use placeholder)
+        # In production, this would come from JWT token
+        factory_id = "test-factory-id"  # TODO: Get from auth context
+
+        # Start negotiation
+        engine = NegotiationEngine(db)
+        negotiation = await engine.start_negotiation(
+            invoice_id=invoice_id,
+            factory_id=factory_id,
+        )
+
         return {
-            "message": "Start negotiation endpoint - to be implemented",
+            "negotiation_id": str(negotiation.id),
             "invoice_id": invoice_id,
-            "status": "pending_implementation"
+            "factory_id": factory_id,
+            "commodity": negotiation.commodity,
+            "quantity": float(negotiation.quantity),
+            "unit": negotiation.unit,
+            "target_price": float(negotiation.target_price),
+            "status": negotiation.status,
+            "vendors_contacted": 50,  # Will be actual count after implementation
+            "estimated_completion": "2024-04-08T14:30:00Z",  # 2 hours from now
+            "started_at": negotiation.started_at.isoformat(),
         }
 
+    except ValueError as e:
+        logger.error("Negotiation validation failed", error=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error("Start negotiation failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to start negotiation: {str(e)}")
@@ -89,13 +113,18 @@ async def get_negotiation_status(
     try:
         logger.info("Get negotiation status requested", negotiation_id=negotiation_id)
 
-        # TODO: Implement negotiation status retrieval
-        return {
-            "message": "Get negotiation status endpoint - to be implemented",
-            "negotiation_id": negotiation_id,
-            "status": "pending_implementation"
-        }
+        # Import negotiation engine
+        from app.services.negotiation_engine import NegotiationEngine
 
+        # Get negotiation status
+        engine = NegotiationEngine(db)
+        status = await engine.get_negotiation_status(negotiation_id)
+
+        return status
+
+    except ValueError as e:
+        logger.error("Negotiation not found", error=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error("Get negotiation status failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to get status: {str(e)}")
@@ -104,6 +133,7 @@ async def get_negotiation_status(
 @router.post("/{negotiation_id}/confirm")
 async def confirm_order(
     negotiation_id: str,
+    vendor_id: str,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -119,6 +149,7 @@ async def confirm_order(
 
     Args:
         negotiation_id: Negotiation UUID
+        vendor_id: Winning vendor UUID
 
     Returns:
         Confirmation details with savings amount
@@ -127,15 +158,23 @@ async def confirm_order(
         HTTPException: If confirmation fails
     """
     try:
-        logger.info("Confirm order requested", negotiation_id=negotiation_id)
+        logger.info("Confirm order requested", negotiation_id=negotiation_id, vendor_id=vendor_id)
 
-        # TODO: Implement order confirmation logic
-        return {
-            "message": "Confirm order endpoint - to be implemented",
-            "negotiation_id": negotiation_id,
-            "status": "pending_implementation"
-        }
+        # Import negotiation engine
+        from app.services.negotiation_engine import NegotiationEngine
 
+        # Confirm order
+        engine = NegotiationEngine(db)
+        confirmation = await engine.confirm_order(
+            negotiation_id=negotiation_id,
+            vendor_id=vendor_id,
+        )
+
+        return confirmation
+
+    except ValueError as e:
+        logger.error("Order confirmation validation failed", error=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error("Confirm order failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to confirm order: {str(e)}")
