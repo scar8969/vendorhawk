@@ -5,6 +5,7 @@ Represents suppliers in the vendor database for negotiation.
 """
 
 from datetime import datetime
+from typing import Optional
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB

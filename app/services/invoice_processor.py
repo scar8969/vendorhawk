@@ -25,7 +25,6 @@ from app.models import Invoice
 from app.utils.ai_client import AIClient
 from app.utils.logger import get_logger
 from app.utils.ocr_client import OCRClient
-from app.utils.validators import validate_image_quality
 
 logger = get_logger(__name__)
 
